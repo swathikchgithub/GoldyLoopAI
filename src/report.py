@@ -174,8 +174,40 @@ def generate_report(eval_results_path: str, output_dir: str) -> None:
     except Exception:
         clean_golden = []
 
+    # ── History Archiving ───────────────────────────────────────────────
+    runs_dir = os.path.join(output_dir, "runs")
+    os.makedirs(runs_dir, exist_ok=True)
+    
+    current_run_overview = {
+        "timestamp": timestamp,
+        "pass_rate": round(sum(1 for r in valid if r.get('passed', False)) / max(len(valid), 1) * 100, 1),
+        "avg_score": round(sum(r.get('avg_score', 0) for r in valid) / max(len(valid), 1), 2)
+    }
+
+    current_run_file = os.path.join(runs_dir, f"run_{timestamp}.json")
+    with open(current_run_file, "w") as f:
+        json.dump({"summary": current_run_overview, "results": cleaned_results}, f)
+
+    # Load all historical runs to generate trend and regression diff
+    all_runs = []
+    for fname in sorted(os.listdir(runs_dir)):
+        if fname.endswith(".json"):
+            try:
+                with open(os.path.join(runs_dir, fname), "r") as f:
+                    all_runs.append(json.load(f))
+            except Exception:
+                pass
+
+    previous_eval_data = []
+    if len(all_runs) > 1:
+        previous_eval_data = all_runs[-2].get("results", [])
+
+    history_summaries = [run["summary"] for run in all_runs if "summary" in run]
+
     js_content = f"window.goldenDataset = {json.dumps(clean_golden)};\n"
     js_content += f"window.evalData = {json.dumps(cleaned_results)};\n"
+    js_content += f"window.previousEvalData = {json.dumps(previous_eval_data)};\n"
+    js_content += f"window.runHistory = {json.dumps(history_summaries)};\n"
 
     with open(app_data_path, "w") as f:
         f.write(js_content)

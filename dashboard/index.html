@@ -198,6 +198,10 @@ tbody td.normal{font-family:var(--font-body)}
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
       Slice Analysis
     </a>
+    <a class="nav-item" onclick="showPage('regression',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      Regression Diff
+    </a>
     <div class="nav-section" style="margin-top:var(--space-4)">Project</div>
     <a class="nav-item" onclick="showPage('pipeline',this)">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
@@ -277,9 +281,15 @@ tbody td.normal{font-family:var(--font-body)}
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:var(--space-8)">
-        <div class="card-title">Score Distribution per Example</div>
-        <div class="chart-wrap" style="height:180px"><canvas id="chartLine"></canvas></div>
+      <div class="section-row" style="margin-bottom:var(--space-8)">
+        <div class="card">
+          <div class="card-title">Score Distribution per Example</div>
+          <div class="chart-wrap" style="height:180px"><canvas id="chartLine"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Historical Pass Rate Trend</div>
+          <div class="chart-wrap" style="height:180px"><canvas id="chartTrend"></canvas></div>
+        </div>
       </div>
     </div>
 
@@ -344,6 +354,27 @@ tbody td.normal{font-family:var(--font-body)}
           <div class="card-title">Avg Score by Scenario</div>
           <div class="chart-wrap"><canvas id="chartSliceScenario"></canvas></div>
         </div>
+      </div>
+    </div>
+
+    <!-- ── REGRESSION DIFF ── -->
+    <div id="page-regression" class="page">
+      <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--space-2);letter-spacing:-0.02em">Regression Diff</h1>
+      <p style="color:var(--text-muted);margin-bottom:var(--space-6);font-size:var(--text-sm)">Compare the current run against the immediately preceding eval run to detect regressions.</p>
+      
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Question</th>
+              <th>Previous Avg Score</th>
+              <th>Current Avg Score</th>
+              <th>Difference (Diff)</th>
+            </tr>
+          </thead>
+          <tbody id="regression-tbody"></tbody>
+        </table>
       </div>
     </div>
 
@@ -815,6 +846,80 @@ function renderSliceCharts() {
     });
   });
 })();
+
+// ── REGRESSION DIFF & TREND CHART ───────────────────────────────────────
+const prevData = window.previousEvalData || [];
+const runHistory = window.runHistory || [];
+const regBody = document.getElementById('regression-tbody');
+
+if(prevData.length > 0 && evalData.length > 0) {
+  let diffsHTML = '';
+  evalData.forEach(curr => {
+    const prev = prevData.find(p => p.id === curr.id);
+    if(prev) {
+      const diff = (curr.avg||0) - (prev.avg||0);
+      if (diff !== 0) {
+        const color = diff > 0 ? 'var(--green)' : 'var(--red)';
+        const sign = diff > 0 ? '+' : '';
+        diffsHTML += `<tr>
+          <td style="font-weight:600">${curr.id}</td>
+          <td class="normal" style="max-width:240px;font-family:var(--font-body);font-size:var(--text-xs)">${curr.input}</td>
+          <td>${prev.avg.toFixed(2)}</td>
+          <td>${curr.avg.toFixed(2)}</td>
+          <td style="color:${color};font-weight:bold">${sign}${diff.toFixed(2)}</td>
+        </tr>`;
+      }
+    }
+  });
+  if(diffsHTML === '') {
+    diffsHTML = '<tr><td colspan="5" style="text-align:center;padding:var(--space-6);color:var(--text-muted)">No score changes detected between runs.</td></tr>';
+  }
+  regBody.innerHTML = diffsHTML;
+} else if (regBody) {
+  regBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:var(--space-6);color:var(--text-muted)">Not enough historical runs to compare. Run the pipeline again to generate history.</td></tr>';
+}
+
+if(runHistory.length > 0) {
+  const trendEl = document.getElementById('chartTrend');
+  if (trendEl) {
+    const trendCtx = trendEl.getContext('2d');
+    const trendChart = new Chart(trendCtx, {
+      type: 'line',
+      data: {
+        labels: runHistory.map((r, i) => `Run ${i+1}`),
+        datasets: [{
+          label: 'Overall Pass Rate (%)',
+          data: runHistory.map(r => r.pass_rate),
+          borderColor: C.blue,
+          backgroundColor: 'rgba(96,165,250,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointBackgroundColor: C.blue
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { grid: { color: getGrid() }, ticks: { color: getTextColor() } },
+          y: { min: 0, max: 100, grid: { color: getGrid() }, ticks: { color: getTextColor(), stepSize: 20 } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    // Wire up theme toggler to the diff chart
+    const existingThemeBtn = document.querySelector('[data-theme-toggle]');
+    if (existingThemeBtn) {
+      existingThemeBtn.addEventListener('click', () => {
+        trendChart.options.scales.x.grid.color = getGrid();
+        trendChart.options.scales.x.ticks.color = getTextColor();
+        trendChart.options.scales.y.grid.color = getGrid();
+        trendChart.options.scales.y.ticks.color = getTextColor();
+        trendChart.update();
+      });
+    }
+  }
+}
 </script>
 </body>
 </html>
