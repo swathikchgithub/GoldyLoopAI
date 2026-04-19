@@ -1,0 +1,26 @@
+# Environment
+.env
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Python
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Generated outputs (keep golden dataset, ignore pipeline outputs)
+data/pipeline_outputs.json
+data/eval_results.json
+data/eval_report_*.csv
+data/eval_report_*.txt
+data/eval_summary.json
+data/runs/
+dashboard/app_data.js

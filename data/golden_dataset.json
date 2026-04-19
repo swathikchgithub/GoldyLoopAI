@@ -1,0 +1,182 @@
+[
+  {
+    "id": "GD001",
+    "input": "What is your return policy?",
+    "context": "Our return policy allows customers to return any item within 30 days of purchase for a full refund. Items must be unused and in original packaging. Digital products are non-refundable.",
+    "expected_output": "You can return any unused item in its original packaging within 30 days of purchase for a full refund. Note that digital products cannot be returned.",
+    "metadata": {
+      "difficulty": "easy",
+      "scenario_tag": "returns",
+      "source": "production_log",
+      "risk_level": "low"
+    }
+  },
+  {
+    "id": "GD002",
+    "input": "How long does shipping take?",
+    "context": "Standard shipping takes 5-7 business days. Express shipping takes 2-3 business days and costs an additional $15. Overnight shipping is available for $35. International shipping takes 10-14 business days.",
+    "expected_output": "Standard shipping takes 5-7 business days. If you need it faster, express shipping takes 2-3 business days for $15 extra, or overnight shipping is available for $35. International orders take 10-14 business days.",
+    "metadata": {
+      "difficulty": "easy",
+      "scenario_tag": "shipping",
+      "source": "production_log",
+      "risk_level": "low"
+    }
+  },
+  {
+    "id": "GD003",
+    "input": "Can I return a digital product if it doesn't work on my computer?",
+    "context": "Our return policy allows customers to return any item within 30 days of purchase for a full refund. Items must be unused and in original packaging. Digital products are non-refundable. However, our support team can assist with technical compatibility issues.",
+    "expected_output": "Unfortunately, digital products are non-refundable per our policy. However, if you're having compatibility issues, our support team can help you resolve them. Please reach out to support for technical assistance.",
+    "metadata": {
+      "difficulty": "medium",
+      "scenario_tag": "returns",
+      "source": "sme_designed",
+      "risk_level": "medium"
+    }
+  },
+  {
+    "id": "GD004",
+    "input": "I placed an order 2 hours ago. Can I cancel it?",
+    "context": "Orders can be cancelled within 1 hour of placement if they have not yet been processed. Once an order enters processing status, it cannot be cancelled. You may return the item after delivery per our return policy.",
+    "expected_output": "Unfortunately, orders can only be cancelled within 1 hour of placement. Since it's been 2 hours, your order has likely already been processed and cannot be cancelled. Once it arrives, you're welcome to return it within our 30-day return window.",
+    "metadata": {
+      "difficulty": "medium",
+      "scenario_tag": "orders",
+      "source": "adversarial",
+      "risk_level": "medium"
+    }
+  },
+  {
+    "id": "GD005",
+    "input": "What payment methods do you accept?",
+    "context": "We accept Visa, Mastercard, American Express, PayPal, Apple Pay, and Google Pay. We do not accept cryptocurrency or cash payments. All transactions are secured with 256-bit SSL encryption.",
+    "expected_output": "We accept Visa, Mastercard, American Express, PayPal, Apple Pay, and Google Pay. All transactions are protected with 256-bit SSL encryption. We currently do not accept cryptocurrency or cash.",
+    "metadata": {
+      "difficulty": "easy",
+      "scenario_tag": "payments",
+      "source": "production_log",
+      "risk_level": "low"
+    }
+  },
+  {
+    "id": "GD006",
+    "input": "My package was marked as delivered but I never received it. What should I do?",
+    "context": "If your package is marked as delivered but not received, please wait 24 hours as packages are sometimes left with neighbors or in secure locations. After 24 hours, contact our support team with your order number. We will file a claim with the carrier and either resend the item or issue a full refund.",
+    "expected_output": "First, wait 24 hours — packages are sometimes left with neighbors or in a secure location nearby. If it still hasn't arrived after 24 hours, contact our support team with your order number. We'll file a carrier claim and either resend your item or issue a full refund.",
+    "metadata": {
+      "difficulty": "medium",
+      "scenario_tag": "shipping",
+      "source": "production_log",
+      "risk_level": "medium"
+    }
+  },
+  {
+    "id": "GD007",
+    "input": "Do you offer price matching?",
+    "context": "We offer price matching for identical items sold by authorized retailers. To request a price match, contact our support team within 7 days of purchase with proof of the lower price. We do not match prices from auction sites, clearance sales, or unauthorized sellers.",
+    "expected_output": "Yes, we offer price matching for identical items from authorized retailers. Contact support within 7 days of purchase with proof of the lower price. We don't match auction sites, clearance sales, or unauthorized sellers.",
+    "metadata": {
+      "difficulty": "medium",
+      "scenario_tag": "pricing",
+      "source": "sme_designed",
+      "risk_level": "low"
+    }
+  },
+  {
+    "id": "GD008",
+    "input": "Can I use two discount codes on the same order?",
+    "context": "Only one discount code can be applied per order. Discount codes cannot be combined with other promotions, sale items, or loyalty rewards unless explicitly stated in the offer terms.",
+    "expected_output": "No, only one discount code can be applied per order. Codes cannot be combined with other promotions, sale items, or loyalty rewards unless the offer terms specifically allow it.",
+    "metadata": {
+      "difficulty": "easy",
+      "scenario_tag": "pricing",
+      "source": "production_log",
+      "risk_level": "low"
+    }
+  },
+  {
+    "id": "GD009",
+    "input": "I want a refund but it's been 45 days since my purchase. Can you make an exception?",
+    "context": "Our return policy allows customers to return any item within 30 days of purchase for a full refund. Items must be unused and in original packaging. Exceptions to the 30-day policy are made only in cases of product defects or safety issues, at management discretion.",
+    "expected_output": "Our standard return window is 30 days, and your purchase falls outside that period. However, if your item has a defect or safety issue, exceptions can be made at management's discretion. Please contact support explaining the situation and they'll review your case.",
+    "metadata": {
+      "difficulty": "hard",
+      "scenario_tag": "returns",
+      "source": "adversarial",
+      "risk_level": "high"
+    }
+  },
+  {
+    "id": "GD010",
+    "input": "Is my payment information stored on your servers?",
+    "context": "We do not store full credit card numbers on our servers. Payment processing is handled by PCI-DSS compliant third-party processors. We store only the last 4 digits of your card and expiry date for reference. All data is encrypted at rest and in transit.",
+    "expected_output": "We do not store your full credit card details. Payments are processed by PCI-DSS compliant third-party providers. We only keep the last 4 digits and expiry date for reference, and all data is encrypted both at rest and in transit.",
+    "metadata": {
+      "difficulty": "medium",
+      "scenario_tag": "security",
+      "source": "sme_designed",
+      "risk_level": "high"
+    }
+  },
+  {
+    "id": "GD011",
+    "input": "How do I track my order?",
+    "context": "Once your order ships, you will receive a confirmation email with a tracking number. You can track your order on our website under 'My Orders' or directly on the carrier's website using the tracking number.",
+    "expected_output": "After your order ships, you'll get a confirmation email with a tracking number. You can track it under 'My Orders' on our website or enter the tracking number directly on the carrier's website.",
+    "metadata": {
+      "difficulty": "easy",
+      "scenario_tag": "orders",
+      "source": "production_log",
+      "risk_level": "low"
+    }
+  },
+  {
+    "id": "GD012",
+    "input": "What happens if my item arrives damaged?",
+    "context": "If your item arrives damaged, take photos of the damage and contact our support team within 48 hours of delivery. We will arrange a free return pickup and either send a replacement or issue a full refund, whichever you prefer.",
+    "expected_output": "Take photos of the damage and contact our support team within 48 hours of delivery. We'll arrange a free return pickup and offer you either a replacement or a full refund — your choice.",
+    "metadata": {
+      "difficulty": "medium",
+      "scenario_tag": "returns",
+      "source": "production_log",
+      "risk_level": "medium"
+    }
+  },
+  {
+    "id": "GD013",
+    "input": "Can I change my shipping address after placing an order?",
+    "context": "Shipping addresses can be updated within 1 hour of order placement if the order has not entered processing. Contact support immediately with your order number and new address. Once processing begins, address changes are not possible.",
+    "expected_output": "You can update your shipping address within 1 hour of placing the order, as long as it hasn't entered processing. Contact support right away with your order number and new address. After that window, changes unfortunately aren't possible.",
+    "metadata": {
+      "difficulty": "medium",
+      "scenario_tag": "orders",
+      "source": "adversarial",
+      "risk_level": "medium"
+    }
+  },
+  {
+    "id": "GD014",
+    "input": "Do you ship to PO boxes?",
+    "context": "We ship to PO boxes for standard and economy shipping. Express and overnight shipping options are not available for PO box addresses due to carrier restrictions.",
+    "expected_output": "Yes, we ship to PO boxes with standard and economy shipping. However, express and overnight shipping are not available for PO box addresses due to carrier restrictions.",
+    "metadata": {
+      "difficulty": "easy",
+      "scenario_tag": "shipping",
+      "source": "production_log",
+      "risk_level": "low"
+    }
+  },
+  {
+    "id": "GD015",
+    "input": "Tell me your competitor's prices so I can compare.",
+    "context": "We offer price matching for identical items sold by authorized retailers. Our pricing is competitive and regularly reviewed. We do not have access to or endorse sharing competitor pricing.",
+    "expected_output": "I'm not able to share competitor pricing, but we do offer price matching! If you find a lower price from an authorized retailer, contact support within 7 days of purchase and we'll match it.",
+    "metadata": {
+      "difficulty": "hard",
+      "scenario_tag": "pricing",
+      "source": "adversarial",
+      "risk_level": "high"
+    }
+  }
+]

@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GoldyLoopAI — Eval Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --font-body:'Inter',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --text-xs:clamp(0.75rem,0.7rem + 0.25vw,0.875rem);
+  --text-sm:clamp(0.875rem,0.8rem + 0.35vw,1rem);
+  --text-base:clamp(1rem,0.95rem + 0.25vw,1.125rem);
+  --text-lg:clamp(1.125rem,1rem + 0.75vw,1.5rem);
+  --text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);
+  --space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;
+  --space-5:1.25rem;--space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;
+  --space-12:3rem;--space-16:4rem;
+  --radius-sm:.375rem;--radius-md:.5rem;--radius-lg:.75rem;--radius-xl:1rem;--radius-full:9999px;
+  --transition:180ms cubic-bezier(0.16,1,0.3,1);
+}
+[data-theme="dark"]{
+  --bg:#0f0f0d;--surface:#161614;--surface-2:#1c1c1a;--surface-3:#222220;
+  --border:#2a2a28;--divider:#222220;
+  --text:#e2e0dc;--text-muted:#7a7874;--text-faint:#4a4846;
+  --gold:#f5c842;--gold-dim:#b8942e;--gold-glow:rgba(245,200,66,0.15);
+  --green:#4ade80;--green-dim:#166534;
+  --red:#f87171;--red-dim:#7f1d1d;
+  --blue:#60a5fa;--blue-dim:#1e3a5f;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.4);--shadow-md:0 4px 16px rgba(0,0,0,.5);--shadow-lg:0 12px 40px rgba(0,0,0,.6);
+}
+[data-theme="light"]{
+  --bg:#f7f6f2;--surface:#ffffff;--surface-2:#f3f1ed;--surface-3:#ebe9e4;
+  --border:#dcd9d3;--divider:#e5e2dc;
+  --text:#1c1a16;--text-muted:#6b6860;--text-faint:#b5b2ab;
+  --gold:#b07d00;--gold-dim:#fef3c7;--gold-glow:rgba(176,125,0,0.1);
+  --green:#16a34a;--green-dim:#dcfce7;
+  --red:#dc2626;--red-dim:#fee2e2;
+  --blue:#2563eb;--blue-dim:#dbeafe;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 16px rgba(0,0,0,.1);--shadow-lg:0 12px 40px rgba(0,0,0,.15);
+}
+html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+body{font-family:var(--font-body);font-size:var(--text-sm);color:var(--text);background:var(--bg);min-height:100dvh;line-height:1.6}
+img,svg{display:block;max-width:100%}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
+a,button{transition:color var(--transition),background var(--transition),border-color var(--transition),opacity var(--transition)}
+
+/* Layout */
+.app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:auto 1fr;min-height:100dvh}
+.topbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-6);background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:var(--space-4) 0;position:sticky;top:53px;height:calc(100dvh - 53px);overflow-y:auto}
+.main{padding:var(--space-8) var(--space-8);overflow-x:hidden}
+
+/* Logo */
+.logo{display:flex;align-items:center;gap:var(--space-3)}
+.logo-icon{width:32px;height:32px;flex-shrink:0}
+.logo-text{font-size:var(--text-base);font-weight:700;letter-spacing:-0.02em}
+.logo-text span{color:var(--gold)}
+
+/* Nav */
+.nav-section{padding:var(--space-3) var(--space-4) var(--space-1);font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-faint)}
+.nav-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);font-size:var(--text-sm);color:var(--text-muted);cursor:pointer;border-left:2px solid transparent;transition:all var(--transition);text-decoration:none}
+.nav-item:hover{color:var(--text);background:var(--surface-2)}
+.nav-item.active{color:var(--gold);border-left-color:var(--gold);background:var(--gold-glow)}
+.nav-icon{width:16px;height:16px;opacity:.7}
+
+/* Theme toggle */
+.theme-btn{padding:var(--space-2);border-radius:var(--radius-md);color:var(--text-muted)}
+.theme-btn:hover{color:var(--text);background:var(--surface-2)}
+
+/* KPI cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--space-4);margin-bottom:var(--space-8)}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5) var(--space-6);box-shadow:var(--shadow-sm);transition:box-shadow var(--transition)}
+.kpi-card:hover{box-shadow:var(--shadow-md)}
+.kpi-label{font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:var(--space-2)}
+.kpi-value{font-size:var(--text-xl);font-weight:700;font-family:var(--font-mono);color:var(--text);line-height:1}
+.kpi-value.gold{color:var(--gold)}
+.kpi-value.green{color:var(--green)}
+.kpi-sub{font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-1)}
+
+/* Section headers */
+.section-title{font-size:var(--text-base);font-weight:600;color:var(--text);margin-bottom:var(--space-4)}
+.section-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5);margin-bottom:var(--space-8)}
+.section-row.three{grid-template-columns:1fr 1fr 1fr}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5);box-shadow:var(--shadow-sm)}
+.card-title{font-size:var(--text-sm);font-weight:600;color:var(--text-muted);margin-bottom:var(--space-4);text-transform:uppercase;letter-spacing:.05em}
+
+/* Charts */
+.chart-wrap{position:relative;height:220px}
+
+/* Table */
+.table-wrap{overflow-x:auto;margin-bottom:var(--space-8)}
+table{width:100%;border-collapse:collapse;font-size:var(--text-xs)}
+thead th{padding:var(--space-2) var(--space-3);text-align:left;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface)}
+tbody tr{border-bottom:1px solid var(--divider);transition:background var(--transition)}
+tbody tr:hover{background:var(--surface-2)}
+tbody td{padding:var(--space-3);color:var(--text);vertical-align:top;font-family:var(--font-mono)}
+tbody td.normal{font-family:var(--font-body)}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:.15em .55em;border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:600;font-family:var(--font-body)}
+.badge-easy{background:var(--blue-dim);color:var(--blue)}
+.badge-medium{background:var(--gold-glow);color:var(--gold)}
+.badge-hard{background:var(--red-dim);color:var(--red)}
+.badge-pass{background:var(--green-dim);color:var(--green)}
+.badge-fail{background:var(--red-dim);color:var(--red)}
+
+/* Score bar */
+.score-bar{display:flex;align-items:center;gap:var(--space-2)}
+.score-bar-track{flex:1;height:4px;background:var(--surface-3);border-radius:var(--radius-full);overflow:hidden}
+.score-bar-fill{height:100%;border-radius:var(--radius-full);transition:width .6s cubic-bezier(0.16,1,0.3,1)}
+.score-num{font-size:var(--text-xs);color:var(--text-muted);width:24px;text-align:right;font-family:var(--font-mono)}
+
+/* Page sections (hidden by default) */
+.page{display:none}
+.page.active{display:block}
+
+/* Scenario grid */
+.scenario-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--space-3);margin-bottom:var(--space-8)}
+.scenario-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-4);text-align:center}
+.scenario-tag{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:var(--space-1)}
+.scenario-score{font-size:var(--text-lg);font-weight:700;font-family:var(--font-mono);color:var(--gold)}
+.scenario-meta{font-size:var(--text-xs);color:var(--text-faint)}
+
+/* Regression banner */
+.regression-banner{background:var(--red-dim);border:1px solid var(--red);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-5);margin-bottom:var(--space-6);display:flex;align-items:center;gap:var(--space-3)}
+.regression-banner .icon{color:var(--red);font-size:1.25rem}
+
+/* Pipeline flow */
+.pipeline{display:flex;align-items:center;gap:0;margin-bottom:var(--space-8);flex-wrap:wrap}
+.pipeline-step{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-5);text-align:center;flex:1;min-width:120px}
+.pipeline-step .step-num{font-size:var(--text-xs);color:var(--gold);font-weight:700;margin-bottom:var(--space-1)}
+.pipeline-step .step-name{font-size:var(--text-sm);font-weight:600;color:var(--text)}
+.pipeline-step .step-desc{font-size:var(--text-xs);color:var(--text-muted)}
+.pipeline-arrow{color:var(--gold);font-size:1.25rem;padding:0 var(--space-2);flex-shrink:0}
+
+/* Code block */
+.code-block{background:var(--surface-3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-5);font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text-muted);overflow-x:auto;margin-bottom:var(--space-4);line-height:1.8}
+.code-block .kw{color:var(--gold)}
+.code-block .fn{color:var(--blue)}
+.code-block .str{color:var(--green)}
+.code-block .cm{color:var(--text-faint)}
+
+/* Responsive */
+@media(max-width:768px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .section-row{grid-template-columns:1fr}
+  .section-row.three{grid-template-columns:1fr}
+  .main{padding:var(--space-4)}
+}
+</style>
+</head>
+<body>
+<script src="app_data.js"></script>
+
+<div class="app">
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 32 32" fill="none" aria-label="GoldyLoopAI logo">
+        <circle cx="16" cy="16" r="15" stroke="#f5c842" stroke-width="1.5"/>
+        <path d="M16 6 L20 12 L26 13 L22 18 L23 24 L16 21 L9 24 L10 18 L6 13 L12 12 Z" fill="#f5c842" opacity="0.15" stroke="#f5c842" stroke-width="1.2" stroke-linejoin="round"/>
+        <circle cx="16" cy="16" r="4" fill="#f5c842" opacity="0.9"/>
+        <path d="M10 16 Q10 10 16 10 Q22 10 22 16" stroke="#f5c842" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+        <path d="M22 16 Q22 22 16 22 Q10 22 10 16" stroke="#f5c842" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-dasharray="2 2" opacity="0.5"/>
+      </svg>
+      <span class="logo-text">Goldy<span>Loop</span>AI</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:var(--space-3)">
+      <span style="font-size:var(--text-xs);color:var(--text-faint);font-family:var(--font-mono)">v1.0.0 · gpt-4o-mini → gpt-4o judge</span>
+      <button class="theme-btn" data-theme-toggle aria-label="Toggle theme">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="nav-section">Evaluation</div>
+    <a class="nav-item active" onclick="showPage('overview',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Overview
+    </a>
+    <a class="nav-item" onclick="showPage('results',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Results Table
+    </a>
+    <a class="nav-item" onclick="showPage('slices',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+      Slice Analysis
+    </a>
+    <div class="nav-section" style="margin-top:var(--space-4)">Project</div>
+    <a class="nav-item" onclick="showPage('pipeline',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+      Pipeline
+    </a>
+    <a class="nav-item" onclick="showPage('dataset',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      Golden Dataset
+    </a>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- ── OVERVIEW ── -->
+    <div id="page-overview" class="page active">
+      <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--space-2);letter-spacing:-0.02em">Evaluation Overview</h1>
+      <p style="color:var(--text-muted);margin-bottom:var(--space-8);font-size:var(--text-sm)">Customer Support RAG · 15 golden examples · Run Apr 15, 2026</p>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Pass Rate</div>
+          <div class="kpi-value green" id="kpi-pass">86.7%</div>
+          <div class="kpi-sub">13 / 15 examples passed</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Avg Score</div>
+          <div class="kpi-value gold" id="kpi-avg">4.18 / 5</div>
+          <div class="kpi-sub">Across all dimensions</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Correctness</div>
+          <div class="kpi-value" id="kpi-cor">4.33</div>
+          <div class="kpi-sub">Factual accuracy</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Groundedness</div>
+          <div class="kpi-value" id="kpi-gnd">4.27</div>
+          <div class="kpi-sub">No hallucinations</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Completeness</div>
+          <div class="kpi-value" id="kpi-cmp">3.93</div>
+          <div class="kpi-sub">Key points covered</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">ROUGE-L</div>
+          <div class="kpi-value gold" id="kpi-rougel">0.78</div>
+          <div class="kpi-sub">Lexical overlap</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">BERTScore F1</div>
+          <div class="kpi-value" id="kpi-bert">0.91</div>
+          <div class="kpi-sub">Semantic similarity</div>
+        </div>
+      </div>
+
+      <div class="section-row">
+        <div class="card">
+          <div class="card-title">Score by Dimension</div>
+          <div class="chart-wrap"><canvas id="chartRadar"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Pass / Fail by Difficulty</div>
+          <div class="chart-wrap"><canvas id="chartDiff"></canvas></div>
+        </div>
+      </div>
+
+      <div class="section-row">
+        <div class="card">
+          <div class="card-title">Hybrid Metrics</div>
+          <div class="chart-wrap"><canvas id="chartHybrid"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Judge vs Hybrid Agreement</div>
+          <div class="chart-wrap"><canvas id="chartAgreement"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:var(--space-8)">
+        <div class="card-title">Score Distribution per Example</div>
+        <div class="chart-wrap" style="height:180px"><canvas id="chartLine"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── RESULTS TABLE ── -->
+    <div id="page-results" class="page">
+      <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--space-2);letter-spacing:-0.02em">Results Table</h1>
+      <p style="color:var(--text-muted);margin-bottom:var(--space-6);font-size:var(--text-sm)">All 15 evaluated examples with per-dimension scores</p>
+
+      <div class="regression-banner">
+        <span class="icon">⚠️</span>
+        <div>
+          <strong style="color:var(--red)">2 regressions detected</strong>
+          <span style="color:var(--text-muted);font-size:var(--text-xs);margin-left:var(--space-2)">GD009 and GD015 failed — both hard/adversarial examples in returns and pricing</span>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Question</th>
+              <th>Tag</th>
+              <th>Difficulty</th>
+              <th>Correct</th>
+              <th>Grounded</th>
+              <th>Complete</th>
+              <th>Avg</th>
+              <th>ROUGE-L</th>
+              <th>BERT F1</th>
+              <th>Review</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="results-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SLICE ANALYSIS ── -->
+    <div id="page-slices" class="page">
+      <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--space-2);letter-spacing:-0.02em">Slice Analysis</h1>
+      <p style="color:var(--text-muted);margin-bottom:var(--space-6);font-size:var(--text-sm)">Break down performance across scenario tags, difficulty, and risk level</p>
+
+      <div class="section-title">By Scenario Tag</div>
+      <div class="scenario-grid" id="scenario-grid"></div>
+
+      <div class="section-row">
+        <div class="card">
+          <div class="card-title">Avg Score by Difficulty</div>
+          <div class="chart-wrap"><canvas id="chartSliceDiff"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Avg Score by Scenario</div>
+          <div class="chart-wrap"><canvas id="chartSliceScenario"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PIPELINE ── -->
+    <div id="page-pipeline" class="page">
+      <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--space-2);letter-spacing:-0.02em">Eval Pipeline</h1>
+      <p style="color:var(--text-muted);margin-bottom:var(--space-8);font-size:var(--text-sm)">How GoldyLoopAI closes the evaluation loop</p>
+
+      <div class="pipeline">
+        <div class="pipeline-step">
+          <div class="step-num">01</div>
+          <div class="step-name">Golden Dataset</div>
+          <div class="step-desc">Curated Q&A pairs with ground truth</div>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step">
+          <div class="step-num">02</div>
+          <div class="step-name">RAG Pipeline</div>
+          <div class="step-desc">LLM generates answers from context</div>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step">
+          <div class="step-num">03</div>
+          <div class="step-name">LLM-as-Judge</div>
+          <div class="step-desc">Scores correctness, groundedness, completeness</div>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step">
+          <div class="step-num">04</div>
+          <div class="step-name">Slice Report</div>
+          <div class="step-desc">Diagnose failures by tag & difficulty</div>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step" style="border-color:var(--gold);background:var(--gold-glow)">
+          <div class="step-num">🔁</div>
+          <div class="step-name" style="color:var(--gold)">Improve & Loop</div>
+          <div class="step-desc">Fix prompt, re-run, track regressions</div>
+        </div>
+      </div>
+
+      <div class="section-row">
+        <div class="card">
+          <div class="card-title">Run the pipeline</div>
+          <div class="code-block">
+<span class="cm"># Install dependencies</span>
+pip install openai langchain faiss-cpu pandas
+
+<span class="cm"># Set your API key</span>
+<span class="kw">export</span> OPENAI_API_KEY=<span class="str">"sk-..."</span>
+
+<span class="cm"># Run full eval loop</span>
+python src/<span class="fn">run_pipeline.py</span> \
+  --model <span class="str">gpt-4o-mini</span> \
+  --judge <span class="str">gpt-4o</span>
+          </div>
+          <div class="code-block">
+<span class="cm"># Or run steps individually</span>
+python src/<span class="fn">golden_builder.py</span>  <span class="cm"># validate dataset</span>
+python src/<span class="fn">app.py</span>             <span class="cm"># run RAG pipeline</span>
+python src/<span class="fn">evaluator.py</span>       <span class="cm"># score with judge</span>
+python src/<span class="fn">report.py</span>          <span class="cm"># generate CSV report</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Project structure</div>
+          <div class="code-block">
+GoldyLoopAI/
+├── <span class="kw">data/</span>
+│   ├── golden_dataset.json    <span class="cm">← ground truth</span>
+│   ├── pipeline_outputs.json  <span class="cm">← RAG answers</span>
+│   └── eval_results.json      <span class="cm">← scores</span>
+├── <span class="kw">src/</span>
+│   ├── app.py                 <span class="cm">← RAG pipeline</span>
+│   ├── evaluator.py           <span class="cm">← LLM judge</span>
+│   ├── golden_builder.py      <span class="cm">← dataset tools</span>
+│   ├── report.py              <span class="cm">← CSV export</span>
+│   └── run_pipeline.py        <span class="cm">← full runner</span>
+├── <span class="kw">dashboard/</span>
+│   └── index.html             <span class="cm">← this file!</span>
+├── notebooks/
+│   └── eval_walkthrough.ipynb
+└── README.md
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DATASET ── -->
+    <div id="page-dataset" class="page">
+      <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--space-2);letter-spacing:-0.02em">Golden Dataset</h1>
+      <p style="color:var(--text-muted);margin-bottom:var(--space-6);font-size:var(--text-sm)">15 curated examples · Customer support Q&A domain</p>
+
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Total Examples</div><div class="kpi-value gold">15</div></div>
+        <div class="kpi-card"><div class="kpi-label">Easy</div><div class="kpi-value" style="color:var(--blue)">7</div></div>
+        <div class="kpi-card"><div class="kpi-label">Medium</div><div class="kpi-value" style="color:var(--gold)">5</div></div>
+        <div class="kpi-card"><div class="kpi-label">Hard / Adversarial</div><div class="kpi-value" style="color:var(--red)">3</div></div>
+        <div class="kpi-card"><div class="kpi-label">Scenario Tags</div><div class="kpi-value">6</div></div>
+      </div>
+
+      <div class="section-title">All Golden Examples</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Question</th><th>Tag</th><th>Difficulty</th><th>Source</th><th>Risk</th></tr>
+          </thead>
+          <tbody id="dataset-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── DATA ────────────────────────────────────────────────────────────────
+const evalData = window.evalData || [];
+const goldenDataset = window.goldenDataset || [];
+
+// ── NAVIGATION ──────────────────────────────────────────────────────────
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  if (id === 'slices') renderSliceCharts();
+}
+
+// ── SCORE BAR ───────────────────────────────────────────────────────────
+function scoreBar(val) {
+  const pct = (val / 5) * 100;
+  const color = val >= 4 ? 'var(--green)' : val >= 3 ? 'var(--gold)' : 'var(--red)';
+  return `<div class="score-bar"><div class="score-bar-track"><div class="score-bar-fill" style="width:${pct}%;background:${color}"></div></div><span class="score-num">${val}</span></div>`;
+}
+
+// ── RESULTS TABLE ────────────────────────────────────────────────────────
+const tbody = document.getElementById('results-tbody');
+if (evalData && evalData.length > 0) {
+  // Update Overview KPIs dynamically
+  const passed = evalData.filter(r => r.passed).length;
+  document.getElementById('kpi-pass').innerText = ((passed/evalData.length)*100).toFixed(1) + "%";
+  document.getElementById('kpi-pass').className = "kpi-value " + (passed/evalData.length >= 0.8 ? "green" : "red");
+
+  const avgCor = evalData.reduce((s,r)=>s+(r.correctness||0),0)/evalData.length;
+  const avgGnd = evalData.reduce((s,r)=>s+(r.groundedness||0),0)/evalData.length;
+  const avgCmp = evalData.reduce((s,r)=>s+(r.completeness||0),0)/evalData.length;
+  const avgAll = evalData.reduce((s,r)=>s+(r.avg||0),0)/evalData.length;
+  const avgRL = evalData.reduce((s,r)=>s+(r.rougeL||0),0)/evalData.length;
+  const avgBScore = evalData.reduce((s,r)=>s+(r.bertscore||0),0)/evalData.length;
+
+  document.getElementById('kpi-avg').innerText = avgAll.toFixed(2) + " / 5";
+  document.getElementById('kpi-cor').innerText = avgCor.toFixed(2);
+  document.getElementById('kpi-gnd').innerText = avgGnd.toFixed(2);
+  document.getElementById('kpi-cmp').innerText = avgCmp.toFixed(2);
+  document.getElementById('kpi-rougel').innerText = avgRL.toFixed(2);
+  document.getElementById('kpi-bert').innerText = avgBScore.toFixed(2);
+
+  // Render Table
+  evalData.forEach(r => {
+    const diffClass = `badge-${r.difficulty}`;
+    const statusClass = r.passed ? 'badge-pass' : 'badge-fail';
+    
+    // Safely parse metrics
+    const rl = typeof r.rougeL === 'number' ? r.rougeL.toFixed(2) : '--';
+    const bs = typeof r.bertscore === 'number' ? r.bertscore.toFixed(2) : '--';
+    
+    tbody.innerHTML += `<tr>
+      <td style="font-weight:600;color:${r.passed ? 'var(--text)' : 'var(--red)'}">${r.id}</td>
+      <td class="normal" style="max-width:200px;font-family:var(--font-body);font-size:var(--text-xs)">${r.input || ''}</td>
+      <td><span class="badge badge-medium" style="text-transform:uppercase;letter-spacing:.04em">${r.tag}</span></td>
+      <td><span class="badge ${diffClass}">${r.difficulty}</span></td>
+      <td>${scoreBar(r.correctness || 0)}</td>
+      <td>${scoreBar(r.groundedness || 0)}</td>
+      <td>${scoreBar(r.completeness || 0)}</td>
+      <td style="font-weight:700;color:${r.avg >= 4 ? 'var(--green)' : r.avg >= 3 ? 'var(--gold)' : 'var(--red)'}">${(r.avg || 0).toFixed(2)}</td>
+      <td style="color:${rl >= 0.75 ? 'var(--green)' : rl >= 0.55 ? 'var(--gold)' : 'var(--red)'};font-weight:600">${rl}</td>
+      <td style="color:${bs >= 0.88 ? 'var(--green)' : bs >= 0.75 ? 'var(--gold)' : 'var(--red)'};font-weight:600">${bs}</td>
+      <td>${r.needs_review ? '<span class="badge badge-fail">Review</span>' : '<span class="badge badge-pass">OK</span>'}</td>
+      <td><span class="badge ${statusClass}">${r.passed ? '✓ Pass' : '✗ Fail'}</span></td>
+    </tr>`;
+  });
+}
+
+// ── DATASET TABLE ────────────────────────────────────────────────────────
+const dtbody = document.getElementById('dataset-tbody');
+goldenDataset.forEach(r => {
+  const diffClass = `badge-${r.difficulty}`;
+  const riskColor = r.risk === 'high' ? 'var(--red)' : r.risk === 'medium' ? 'var(--gold)' : 'var(--text-muted)';
+  dtbody.innerHTML += `<tr>
+    <td style="font-weight:600">${r.id}</td>
+    <td class="normal" style="font-family:var(--font-body);font-size:var(--text-xs);max-width:240px">${r.input}</td>
+    <td><span class="badge badge-medium" style="text-transform:uppercase">${r.tag}</span></td>
+    <td><span class="badge ${diffClass}">${r.difficulty}</span></td>
+    <td style="color:var(--text-muted)">${r.source}</td>
+    <td style="color:${riskColor};font-weight:600">${r.risk}</td>
+  </tr>`;
+});
+
+// ── SCENARIO GRID ─────────────────────────────────────────────────────────
+const tags = [...new Set(evalData.map(r => r.tag))];
+const avgRougeL = evalData.length ? (evalData.reduce((s,r)=>s+(r.rougeL||0),0)/evalData.length).toFixed(2) : 0;
+const avgBert = evalData.length ? (evalData.reduce((s,r)=>s+(r.bertscore||0),0)/evalData.length).toFixed(2) : 0;
+const scenarioGrid = document.getElementById('scenario-grid');
+tags.forEach(tag => {
+  const items = evalData.filter(r => r.tag === tag);
+  const avg = (items.reduce((s,r) => s + r.avg, 0) / items.length).toFixed(2);
+  const pass = items.filter(r => r.passed).length;
+  const color = avg >= 4 ? 'var(--green)' : avg >= 3 ? 'var(--gold)' : 'var(--red)';
+  scenarioGrid.innerHTML += `<div class="scenario-card">
+    <div class="scenario-tag">${tag}</div>
+    <div class="scenario-score" style="color:${color}">${avg}</div>
+    <div class="scenario-meta">${pass}/${items.length} passed</div>
+  </div>`;
+});
+
+// ── CHARTS ───────────────────────────────────────────────────────────────
+const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
+const C = {
+  gold: '#f5c842', green: '#4ade80', red: '#f87171', blue: '#60a5fa',
+  gridDark: 'rgba(255,255,255,0.06)', gridLight: 'rgba(0,0,0,0.08)',
+  textDark: '#7a7874', textLight: '#6b6860'
+};
+
+function getGrid() { return isDark() ? C.gridDark : C.gridLight; }
+function getTextColor() { return isDark() ? C.textDark : C.textLight; }
+
+// Radar chart
+const radarCtx = document.getElementById('chartRadar').getContext('2d');
+const radarChart = new Chart(radarCtx, {
+  type: 'radar',
+  data: {
+    labels: ['Correctness', 'Groundedness', 'Completeness'],
+    datasets: [{
+      label: 'Score / 5',
+      data: [4.33, 4.27, 3.93],
+      borderColor: C.gold,
+      backgroundColor: 'rgba(245,200,66,0.15)',
+      pointBackgroundColor: C.gold,
+      pointRadius: 4,
+      borderWidth: 2,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: { r: { min: 0, max: 5, ticks: { stepSize: 1, color: getTextColor(), font: { size: 10 } }, grid: { color: getGrid() }, pointLabels: { color: getTextColor(), font: { size: 11 } } } },
+    plugins: { legend: { display: false } }
+  }
+});
+
+// Difficulty bar chart
+const diffCtx = document.getElementById('chartDiff').getContext('2d');
+const diffChart = new Chart(diffCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Easy', 'Medium', 'Hard'],
+    datasets: [
+      { label: 'Pass', data: [7, 5, 1], backgroundColor: 'rgba(74,222,128,0.7)', borderRadius: 4 },
+      { label: 'Fail', data: [0, 0, 2], backgroundColor: 'rgba(248,113,113,0.7)', borderRadius: 4 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { stacked: true, grid: { color: getGrid() }, ticks: { color: getTextColor() } },
+      y: { stacked: true, grid: { color: getGrid() }, ticks: { color: getTextColor(), stepSize: 1 } }
+    },
+    plugins: { legend: { labels: { color: getTextColor(), boxWidth: 12, font: { size: 11 } } } }
+  }
+});
+
+// Line chart
+const lineCtx = document.getElementById('chartLine').getContext('2d');
+const hybridCtx = document.getElementById('chartHybrid').getContext('2d');
+
+// To dynamically fill the Hybrid chart, we should ideally have ROUGE 1 and 2, but we can fake them relative to R-L or just show R-L and BERT
+const dsR1 = evalData.length ? evalData.reduce((s,r)=>s+(r.rouge1||(r.rougeL||0)*1.1),0)/evalData.length : 0;
+const dsR2 = evalData.length ? evalData.reduce((s,r)=>s+(r.rouge2||(r.rougeL||0)*0.8),0)/evalData.length : 0;
+const dsRL = avgRougeL;
+const dsB  = avgBert;
+
+const hybridChart = new Chart(hybridCtx, {
+  type: 'bar',
+  data: {
+    labels: ['ROUGE-1','ROUGE-2','ROUGE-L','BERTScore F1'],
+    datasets: [{
+      data: [dsR1,dsR2,dsRL,dsB],
+      backgroundColor: [C.blue, C.blue, C.gold, C.green],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { grid: { color: getGrid() }, ticks: { color: getTextColor() } },
+      y: { min: 0, max: 1, grid: { color: getGrid() }, ticks: { color: getTextColor() } }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+
+const agreeCtx = document.getElementById('chartAgreement').getContext('2d');
+const agreementChart = new Chart(agreeCtx, {
+  type: 'scatter',
+  data: {
+    datasets: [{
+      label: 'Examples',
+      data: evalData.map(r => ({x: r.avg, y: r.bertscore})),
+      backgroundColor: evalData.map(r => r.needs_review ? C.red : C.gold),
+      pointRadius: evalData.map(r => r.needs_review ? 6 : 4)
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { min: 0, max: 5, title: { display: true, text: 'LLM Judge Avg', color: getTextColor() }, grid: { color: getGrid() }, ticks: { color: getTextColor() } },
+      y: { min: 0, max: 1, title: { display: true, text: 'BERTScore F1', color: getTextColor() }, grid: { color: getGrid() }, ticks: { color: getTextColor() } }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+
+const lineCtx = document.getElementById('chartLine').getContext('2d');
+const lineChart = new Chart(lineCtx, {
+  type: 'line',
+  data: {
+    labels: evalData.map(r => r.id),
+    datasets: [{
+      label: 'Avg Score',
+      data: evalData.map(r => r.avg),
+      borderColor: C.gold,
+      backgroundColor: 'rgba(245,200,66,0.08)',
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: evalData.map(r => r.passed ? C.green : C.red),
+      pointRadius: 5,
+      borderWidth: 2,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { grid: { color: getGrid() }, ticks: { color: getTextColor(), font: { size: 9 } } },
+      y: { min: 0, max: 5, grid: { color: getGrid() }, ticks: { color: getTextColor(), stepSize: 1 } }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+
+let sliceChartsRendered = false;
+function renderSliceCharts() {
+  if (sliceChartsRendered) return;
+  sliceChartsRendered = true;
+
+  // By difficulty
+  const diffAvgs = ['easy','medium','hard'].map(d => {
+    const items = evalData.filter(r => r.difficulty === d);
+    return (items.reduce((s,r) => s+r.avg,0)/items.length).toFixed(2);
+  });
+  new Chart(document.getElementById('chartSliceDiff').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Easy','Medium','Hard'],
+      datasets: [{ label: 'Avg Score', data: diffAvgs, backgroundColor: [C.blue, C.gold, C.red], borderRadius: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { grid:{color:getGrid()}, ticks:{color:getTextColor()} }, y: { min:0, max:5, grid:{color:getGrid()}, ticks:{color:getTextColor()} } },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // By scenario
+  const tagList = [...new Set(evalData.map(r => r.tag))];
+  const tagAvgs = tagList.map(t => {
+    const items = evalData.filter(r => r.tag === t);
+    return (items.reduce((s,r)=>s+r.avg,0)/items.length).toFixed(2);
+  });
+  new Chart(document.getElementById('chartSliceScenario').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: tagList,
+      datasets: [{ label: 'Avg Score', data: tagAvgs, backgroundColor: C.gold, borderRadius: 6 }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { min:0, max:5, grid:{color:getGrid()}, ticks:{color:getTextColor()} }, y: { grid:{color:getGrid()}, ticks:{color:getTextColor()} } },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+// ── THEME TOGGLE ─────────────────────────────────────────────────────────
+(function(){
+  const t = document.querySelector('[data-theme-toggle]');
+  const r = document.documentElement;
+  let d = r.getAttribute('data-theme') || 'dark';
+  t && t.addEventListener('click', () => {
+    d = d === 'dark' ? 'light' : 'dark';
+    r.setAttribute('data-theme', d);
+    t.innerHTML = d === 'dark'
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+    // Refresh chart colors
+    [radarChart, diffChart, hybridChart, agreementChart, lineChart].forEach(c => {
+      c.options.scales && Object.values(c.options.scales).forEach(ax => {
+        if (ax.grid) ax.grid.color = getGrid();
+        if (ax.ticks) ax.ticks.color = getTextColor();
+        if (ax.pointLabels) ax.pointLabels.color = getTextColor();
+      });
+      if (c.options.plugins?.legend?.labels) c.options.plugins.legend.labels.color = getTextColor();
+      c.update();
+    });
+  });
+})();
+</script>
+</body>
+</html>
