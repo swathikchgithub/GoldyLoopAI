@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.env"))
 import json
 import time
+import openai
 from openai import OpenAI
 from rouge_score import rouge_scorer
 from bert_score import score as bert_score
@@ -35,7 +36,7 @@ Return ONLY this JSON (no markdown, no explanation):
 {{"correctness": <1-5>, "groundedness": <1-5>, "completeness": <1-5>, "reason": "<one sentence explaining any issues or confirming quality>"}}"""
 
 
-def judge_single(item: dict, judge_model: str = "gpt-4o", pass_cutoff: float = 3.5) -> dict:
+def judge_single(item: dict, judge_model: str = "gpt-4o", pass_cutoff: float = 3.5, weights: dict = None) -> dict:
     """Run the judge on a single evaluated item."""
     prompt = JUDGE_PROMPT.format(
         question=item["input"],
@@ -44,23 +45,42 @@ def judge_single(item: dict, judge_model: str = "gpt-4o", pass_cutoff: float = 3
         actual_output=item.get("actual_output", ""),
     )
 
-    response = client.chat.completions.create(
-        model=judge_model,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.0,
-        max_tokens=200,
-    )
+    max_retries = 3
+    base_delay = 2
 
-    raw = response.choices[0].message.content.strip()
-    scores = json.loads(raw)
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                model=judge_model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0,
+                max_tokens=200,
+            )
+            raw = response.choices[0].message.content.strip()
+            scores = json.loads(raw)
+            break
+        except (openai.RateLimitError, openai.APIConnectionError, openai.InternalServerError, json.JSONDecodeError) as e:
+            if attempt == max_retries - 1:
+                raise Exception(f"Failed after {max_retries} attempts: {e}")
+            delay = base_delay * (2 ** attempt)
+            print(f"  ⏳ API or parsing error: {e.__class__.__name__} - Retrying in {delay}s...")
+            time.sleep(delay)
+            
+    if weights is None:
+        weights = {"correctness": 1.0, "groundedness": 1.0, "completeness": 1.0}
+        
+    total_weight = weights.get("correctness", 1.0) + weights.get("groundedness", 1.0) + weights.get("completeness", 1.0)
+    
     scores["avg_score"] = round(
-        (scores["correctness"] + scores["groundedness"] + scores["completeness"]) / 3, 2
+        (scores.get("correctness", 0) * weights.get("correctness", 1.0) +
+         scores.get("groundedness", 0) * weights.get("groundedness", 1.0) +
+         scores.get("completeness", 0) * weights.get("completeness", 1.0)) / total_weight, 2
     )
     scores["passed"] = scores["avg_score"] >= pass_cutoff
     return scores
 
 
-def run_evaluation(pipeline_outputs: list[dict], judge_model: str = "gpt-4o", pass_cutoff: float = 3.5) -> list[dict]:
+def run_evaluation(pipeline_outputs: list[dict], judge_model: str = "gpt-4o", pass_cutoff: float = 3.5, weights: dict = None) -> list[dict]:
     """Run the judge over all pipeline outputs and calculate hybrid semantic metrics."""
     results = []
     
@@ -86,7 +106,7 @@ def run_evaluation(pipeline_outputs: list[dict], judge_model: str = "gpt-4o", pa
         bert_f1 = round(F1[i].item(), 2)
         
         try:
-            scores = judge_single(item, judge_model, pass_cutoff)
+            scores = judge_single(item, judge_model, pass_cutoff, weights)
             
             # Simple heuristic for 'needs_review' check logic
             normalized_judge = scores["avg_score"] / 5.0
