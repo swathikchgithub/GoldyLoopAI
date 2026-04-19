@@ -286,7 +286,15 @@ tbody td.normal{font-family:var(--font-body)}
     <!-- ── RESULTS TABLE ── -->
     <div id="page-results" class="page">
       <h1 style="font-size:var(--text-xl);font-weight:700;margin-bottom:var(--space-2);letter-spacing:-0.02em">Results Table</h1>
-      <p style="color:var(--text-muted);margin-bottom:var(--space-6);font-size:var(--text-sm)">All 15 evaluated examples with per-dimension scores</p>
+      <p style="color:var(--text-muted);margin-bottom:var(--space-4);font-size:var(--text-sm)">All 15 evaluated examples with per-dimension scores</p>
+
+      <div style="display:flex;gap:var(--space-3);margin-bottom:var(--space-6);flex-wrap:wrap">
+        <input type="text" id="searchInput" placeholder="Search ID or Question..." style="padding:var(--space-2) var(--space-3);border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);color:var(--text);font-family:var(--font-body);font-size:var(--text-sm);flex:1;min-width:200px">
+        <select id="filterTag" style="padding:var(--space-2) var(--space-3);border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);color:var(--text);font-family:var(--font-body);font-size:var(--text-sm)"><option value="all">All Tags</option></select>
+        <select id="filterDiff" style="padding:var(--space-2) var(--space-3);border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);color:var(--text);font-family:var(--font-body);font-size:var(--text-sm)"><option value="all">All Difficulties</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select>
+        <select id="filterPass" style="padding:var(--space-2) var(--space-3);border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);color:var(--text);font-family:var(--font-body);font-size:var(--text-sm)"><option value="all">All Status</option><option value="pass">Pass</option><option value="fail">Fail</option></select>
+        <button onclick="exportCSV()" style="padding:var(--space-2) var(--space-4);background:var(--surface-3);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--text);font-weight:600;font-size:var(--text-sm);cursor:pointer">⬇ Export CSV</button>
+      </div>
 
       <div class="regression-banner">
         <span class="icon">⚠️</span>
@@ -493,30 +501,86 @@ if (evalData && evalData.length > 0) {
   document.getElementById('kpi-rougel').innerText = avgRL.toFixed(2);
   document.getElementById('kpi-bert').innerText = avgBScore.toFixed(2);
 
+  // Populate tags filter
+  const tagsList = [...new Set(evalData.map(r => r.tag))];
+  const tagSelect = document.getElementById('filterTag');
+  tagsList.forEach(t => tagSelect.innerHTML += `<option value="${t}">${t}</option>`);
+
   // Render Table
-  evalData.forEach(r => {
-    const diffClass = `badge-${r.difficulty}`;
-    const statusClass = r.passed ? 'badge-pass' : 'badge-fail';
+  window.toggleReason = function(id) {
+    const el = document.getElementById('reason-' + id);
+    if(el.style.display === 'none') { el.style.display = 'table-row'; } else { el.style.display = 'none'; }
+  }
+
+  function renderTable(data) {
+    tbody.innerHTML = data.map(r => {
+      const diffClass = `badge-${r.difficulty}`;
+      const statusClass = r.passed ? 'badge-pass' : 'badge-fail';
+      const rl = typeof r.rougeL === 'number' ? r.rougeL.toFixed(2) : '--';
+      const bs = typeof r.bertscore === 'number' ? r.bertscore.toFixed(2) : '--';
+      
+      return `<tr onclick="toggleReason('${r.id}')" style="cursor:pointer" title="Click to view judge reasoning">
+        <td style="font-weight:600;color:${r.passed ? 'var(--text)' : 'var(--red)'}">${r.id}</td>
+        <td class="normal" style="max-width:200px;font-family:var(--font-body);font-size:var(--text-xs)">${r.input || ''}</td>
+        <td><span class="badge badge-medium" style="text-transform:uppercase;letter-spacing:.04em">${r.tag}</span></td>
+        <td><span class="badge ${diffClass}">${r.difficulty}</span></td>
+        <td>${scoreBar(r.correctness || 0)}</td>
+        <td>${scoreBar(r.groundedness || 0)}</td>
+        <td>${scoreBar(r.completeness || 0)}</td>
+        <td style="font-weight:700;color:${r.avg >= 4 ? 'var(--green)' : r.avg >= 3 ? 'var(--gold)' : 'var(--red)'}">${(r.avg || 0).toFixed(2)}</td>
+        <td style="color:${rl >= 0.75 ? 'var(--green)' : rl >= 0.55 ? 'var(--gold)' : 'var(--red)'};font-weight:600">${rl}</td>
+        <td style="color:${bs >= 0.88 ? 'var(--green)' : bs >= 0.75 ? 'var(--gold)' : 'var(--red)'};font-weight:600">${bs}</td>
+        <td>${r.needs_review ? '<span class="badge badge-fail">Review</span>' : '<span class="badge badge-pass">OK</span>'}</td>
+        <td><span class="badge ${statusClass}">${r.passed ? '✓ Pass' : '✗ Fail'}</span></td>
+      </tr>
+      <tr id="reason-${r.id}" style="display:none;background:var(--surface-2)">
+        <td colspan="12" style="padding:var(--space-4);border-bottom:1px solid var(--border)">
+          <div style="font-weight:600;color:var(--gold);margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:1px">Judge Reasoning</div>
+          <div style="color:var(--text);font-family:var(--font-body);font-size:13px">${r.reason || 'No reasoning provided.'}</div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+  
+  renderTable(evalData);
+
+  // Filters logic
+  function applyFilters() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const t = document.getElementById('filterTag').value;
+    const d = document.getElementById('filterDiff').value;
+    const p = document.getElementById('filterPass').value;
     
-    // Safely parse metrics
-    const rl = typeof r.rougeL === 'number' ? r.rougeL.toFixed(2) : '--';
-    const bs = typeof r.bertscore === 'number' ? r.bertscore.toFixed(2) : '--';
-    
-    tbody.innerHTML += `<tr>
-      <td style="font-weight:600;color:${r.passed ? 'var(--text)' : 'var(--red)'}">${r.id}</td>
-      <td class="normal" style="max-width:200px;font-family:var(--font-body);font-size:var(--text-xs)">${r.input || ''}</td>
-      <td><span class="badge badge-medium" style="text-transform:uppercase;letter-spacing:.04em">${r.tag}</span></td>
-      <td><span class="badge ${diffClass}">${r.difficulty}</span></td>
-      <td>${scoreBar(r.correctness || 0)}</td>
-      <td>${scoreBar(r.groundedness || 0)}</td>
-      <td>${scoreBar(r.completeness || 0)}</td>
-      <td style="font-weight:700;color:${r.avg >= 4 ? 'var(--green)' : r.avg >= 3 ? 'var(--gold)' : 'var(--red)'}">${(r.avg || 0).toFixed(2)}</td>
-      <td style="color:${rl >= 0.75 ? 'var(--green)' : rl >= 0.55 ? 'var(--gold)' : 'var(--red)'};font-weight:600">${rl}</td>
-      <td style="color:${bs >= 0.88 ? 'var(--green)' : bs >= 0.75 ? 'var(--gold)' : 'var(--red)'};font-weight:600">${bs}</td>
-      <td>${r.needs_review ? '<span class="badge badge-fail">Review</span>' : '<span class="badge badge-pass">OK</span>'}</td>
-      <td><span class="badge ${statusClass}">${r.passed ? '✓ Pass' : '✗ Fail'}</span></td>
-    </tr>`;
-  });
+    const filtered = evalData.filter(r => {
+      const matchQ = (r.id.toLowerCase().includes(q) || (r.input||'').toLowerCase().includes(q));
+      const matchT = t === 'all' || r.tag === t;
+      const matchD = d === 'all' || r.difficulty === d;
+      const matchP = p === 'all' || (p === 'pass' ? r.passed : (p === 'fail' ? !r.passed : true));
+      return matchQ && matchT && matchD && matchP;
+    });
+    renderTable(filtered);
+  }
+  
+  document.getElementById('searchInput').addEventListener('input', applyFilters);
+  document.getElementById('filterTag').addEventListener('change', applyFilters);
+  document.getElementById('filterDiff').addEventListener('change', applyFilters);
+  document.getElementById('filterPass').addEventListener('change', applyFilters);
+
+  // Export CSV
+  window.exportCSV = function() {
+    if(!evalData) return;
+    const headers = ['id', 'input', 'tag', 'difficulty', 'correctness', 'groundedness', 'completeness', 'avg', 'rougeL', 'bertscore', 'passed', 'reason'];
+    const rows = evalData.map(r => headers.map(h => '"' + String(r[h] || '').replace(/"/g, '""') + '"').join(','));
+    const csvContent = headers.join(',') + '\\n' + rows.join('\\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "goldyloopai_eval_export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 }
 
 // ── DATASET TABLE ────────────────────────────────────────────────────────
