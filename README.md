@@ -1,17 +1,17 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/GoldyLoopAI-v1.0.0-f5c842?style=for-the-badge&labelColor=0f0f0d" alt="version"/>
+<img src="https://img.shields.io/badge/GoldyLoopAI-v1.2.0-f5c842?style=for-the-badge&labelColor=0f0f0d" alt="version"/>
 <img src="https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python&logoColor=white" alt="python"/>
 <img src="https://img.shields.io/badge/OpenAI-GPT--4o-412991?style=for-the-badge&logo=openai&logoColor=white" alt="openai"/>
 <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="license"/>
 
-# 🌟 GoldyLoopAI
+# 🌟 GoldyLoopAI (v1.2)
 
 **Build golden datasets. Close the eval loop.**
 
-A complete, end-to-end LLM evaluation framework that takes you from raw Q&A pairs to a slice-based regression dashboard — all in one loop.
+A complete, production-grade LLM evaluation framework that takes you from raw Q&A pairs to a slice-based regression dashboard, fortified with CI/CD PR Gates, automated cost estimators, historical data archiving, and semantic metrics scoring.
 
-[Live Dashboard](#dashboard) · [Quick Start](#quick-start) · [How It Works](#how-it-works) · [Project Structure](#project-structure)
+[Live Dashboard](#dashboard) · [Quick Start](#quick-start) · [Core Concepts](#how-it-works) · [Project Structure](#project-structure)
 
 </div>
 
@@ -54,6 +54,20 @@ python src/run_pipeline.py --model gpt-4o-mini --judge gpt-4o
 ```
 
 Then open `dashboard/index.html` in your browser to explore the results. ✨
+
+### 🛡️ Advanced CLI Controls (v1.2)
+GoldyLoopAI supports advanced CLI controls for integration into GitHub Actions, CI/CD pipelines, and cost-constrained environments:
+
+```bash
+# Dry run to estimate API costs via Tiktoken before executing
+python src/run_pipeline.py --dry-run
+
+# Adjust pass thresholds and dimension weights (prioritize groundedness heavily)
+python src/run_pipeline.py --pass-cutoff 4.0 --weight-groundedness 2.0 --weight-completeness 0.5 
+
+# Enforce a CI/CD Pull Request Quality Gate (Exits code 1 if pass rate drops)
+python src/run_pipeline.py --min-pass-rate 95.0
+```
 
 ---
 
@@ -128,16 +142,16 @@ You can also run the hybrid scorer directly:
 python src/hybrid_scorer.py
 ```
 
-## Dashboard
+## Dashboard (v1.2 Upgrades)
 
-Open `dashboard/index.html` in any browser — no server needed.
+Open `dashboard/index.html` in any browser — no server needed. The backend dynamically builds `dashboard/app_data.js` and securely loops your history into `data/runs/`.
 
 Features:
-- **Overview** — KPI cards + radar chart + score distribution
-- **Results Table** — per-example scores with pass/fail badges
-- **Slice Analysis** — breakdown by scenario and difficulty
-- **Pipeline** — how the eval loop works with code snippets
-- **Golden Dataset** — full dataset browser
+- **Historical Trend Chart** — Watch your overall pass rate dynamically climb or regress over time on the main Overview.
+- **Regression Diff Engine** — Mathematically maps your current evaluation against your previous `n-1` run and highlights score differences.
+- **Interactive UI Filtering** — Search, filter by scenario tags instantly, or filter by pass/fail via dropdowns.
+- **Expandable Judge Reasoning** — Click any table row to drop down the LLM Judge's textual reasoning parameter.
+- **Export to CSV** — Download semantic scores and outputs with one click.
 
 ---
 
